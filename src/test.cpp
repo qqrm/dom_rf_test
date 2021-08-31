@@ -32,7 +32,5 @@ int main(int argc, char const *argv[])
 
     std::jthread gen_thread(gen_orders, book_holder);
 
-    // std::unique_ptr<OrderAction> qwe;
-
     return 0;
 }

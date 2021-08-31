@@ -23,7 +23,7 @@ namespace book_holder
         BookMapById books_id_;
         BookIdByInstr books_by_instr_;
         int id{0};
-        std::shared_mutex m_;
+        mutable std::shared_mutex m_;
 
     public:
         BookHolder() = default;
@@ -34,7 +34,6 @@ namespace book_holder
             for (auto book : books_)
             {
                 auto cur_id = id++;
-                std::cout << "instr: " << book->GetInstrument() << " id: " << cur_id;
                 books_id_.insert({cur_id, book});
                 books_by_instr_[book->GetInstrument()].insert(cur_id);
             }
@@ -42,17 +41,21 @@ namespace book_holder
 
         auto GetInstruments() const -> std::set<std::string>
         {
+            std::shared_lock lock(m_);
             auto r = std::views::keys(books_by_instr_);
             return {r.begin(), r.end()};
         }
 
         auto GetCount() const -> size_t
         {
+            std::shared_lock lock(m_);
             return books_id_.size();
         }
 
         auto AddBook(BookPtr book_ptr) -> BookId
         {
+            std::unique_lock lock(m_);
+
             std::string const instr = book_ptr->GetInstrument();
 
             books_.insert(book_ptr);
@@ -66,11 +69,19 @@ namespace book_holder
 
         auto RemoveBook(int book_id) -> void
         {
+            std::unique_lock lock(m_);
             if (books_id_.contains(book_id))
             {
                 auto book_ptr = books_id_[book_id];
 
-                books_by_instr_[book_ptr->GetInstrument()].erase(book_id);
+                auto instr = book_ptr->GetInstrument();
+
+                books_by_instr_[instr].erase(book_id);
+                if (books_by_instr_[instr].empty())
+                {
+                    books_by_instr_.erase(instr);
+                }
+
                 books_id_.erase(book_id);
                 books_.erase(book_ptr);
             }
@@ -78,6 +89,7 @@ namespace book_holder
 
         auto AddOrder(std::string instrument, Order order) -> void
         {
+            std::unique_lock lock(m_); // not so good
         }
     };
 
