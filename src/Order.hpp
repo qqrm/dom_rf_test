@@ -8,11 +8,17 @@ using UniqId = int;
 struct Quantity
 {
     int value{0};
+
+    auto operator<=>(auto const &rhs) const { return value <=> rhs.value; }
+    auto operator==(auto const &rhs) const { return value == rhs.value; }
 };
 
 struct Price
 {
     int value{0};
+
+    auto operator<=>(auto const &rhs) const { return value <=> rhs.value; }
+    auto operator==(auto const &rhs) const { return value == rhs.value; }
 };
 
 auto price_hash = [](Price const &p)
@@ -25,6 +31,8 @@ struct Order
     UniqId id;
     Price price;
     Quantity quantity;
+    Order(UniqId i, Price p, Quantity q)
+        : id(i), price(p), quantity(q){};
 };
 
 using OrderPtr = std::shared_ptr<Order>;
@@ -35,9 +43,9 @@ struct OrderAction
 
 struct OrderCreate : OrderAction
 {
-    Order order;
+    OrderPtr order;
     OrderCreate() = delete;
-    explicit OrderCreate(Order o)
+    explicit OrderCreate(OrderPtr o)
         : order(o){};
 };
 

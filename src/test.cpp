@@ -17,7 +17,7 @@ void gen_orders(std::shared_ptr<BookHolder> book_holder)
 
     for (size_t i = 0; i < 100000; i++)
     {
-        auto action = orders_gen.GenerateAction();
+        auto [instrument, order] = orders_gen.GenerateAction();
     }
 }
 
@@ -31,6 +31,14 @@ int main(int argc, char const *argv[])
     auto book_holder = std::make_shared<BookHolder>(books);
 
     std::jthread gen_thread(gen_orders, book_holder);
+
+
+    // while (true)
+    // {
+    //     std::cout << "Available books id's ";
+        
+    // }
+    
 
     return 0;
 }

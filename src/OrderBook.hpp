@@ -8,7 +8,9 @@
 #include <string>
 #include <ranges>
 #include <functional>
+#include <algorithm>
 #include <numeric>
+#include <set>
 
 #include "Order.hpp"
 
@@ -18,18 +20,20 @@ private:
     const std::string instrument_;
     std::unordered_map<UniqId, OrderPtr> orders_;
 
-    std::unordered_map<Price, OrderPtr, decltype(price_hash)> orders_by_prices_;
+    std::unordered_map<Price, std::set<OrderPtr>, decltype(price_hash)> orders_by_prices_;
 
     auto calcQuantity(const Price price) const -> Quantity
     {
-        //     auto r = std::ranges::filter_view(orders_by_prices_.begin(), [price](auto const &p)
-        //                                       { return p.first == price; });
+        if (orders_by_prices_.contains(price))
+        {
+            auto const orders = (orders_by_prices_.find(price))->second;
+            return {std::accumulate(orders.begin(),
+                                    orders.end(),
+                                    0, [](int acc, OrderPtr const &order)
+                                    { return acc + order->quantity.value; })};
+        }
 
-        //   | std::ranges::values_views;
-
-        // auto sum = std::reduce( , 0);
-
-        return Quantity{};
+        return {};
     }
 
 public:
@@ -41,14 +45,35 @@ public:
 
     auto GetInstrument() const -> std::string { return instrument_; };
 
-    auto Add(UniqId order_id) -> void{
-        // orders_.insert(order_id);
+    auto Add(OrderPtr order_ptr) -> void
+    {
+        orders_.insert({order_ptr->id, order_ptr});
+        orders_by_prices_[order_ptr->price].insert(order_ptr);
     };
 
-    auto Remove(UniqId order_id) -> void
+    auto Remove(UniqId id) -> void
     {
-        // orders_.erase(order_id);
-    }
+        if (orders_.contains(id))
+        {
+            auto order_ptr = orders_[id];
+            orders_.erase(id);
+
+            auto price = order_ptr->price;
+
+            if (orders_by_prices_[price].size() == 1)
+            {
+                orders_by_prices_.erase(price);
+                return;
+            }
+
+            orders_by_prices_[price].erase(order_ptr);
+        }
+    };
+
+    auto OrdersCount() -> size_t
+    {
+        return orders_.size();
+    };
 
     auto GetQuantity(const Price price) const -> Quantity
     {

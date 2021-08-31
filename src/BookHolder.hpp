@@ -10,12 +10,11 @@
 
 namespace book_holder
 {
-
+    using BookId = int;
     using BookPtr = std::shared_ptr<OrderBook>;
     using BookSet = std::set<std::shared_ptr<OrderBook>>;
-    using BookMapById = std::unordered_map<int, std::shared_ptr<OrderBook>>;
-    using BookIdByInstr = std::unordered_map<std::string, std::set<int>>;
-    using BookId = int;
+    using BookMapById = std::unordered_map<BookId, std::shared_ptr<OrderBook>>;
+    using BookIdByInstr = std::unordered_map<std::string, std::set<BookId>>;
 
     class BookHolder
     {
@@ -27,6 +26,7 @@ namespace book_holder
 
     public:
         BookHolder() = default;
+        // BookHolder(const BookHolder &) = default;
 
         BookHolder(BookSet books)
             : books_(books)
@@ -52,6 +52,14 @@ namespace book_holder
             return books_id_.size();
         }
 
+        auto GetIds() const -> std::set<BookId>
+        {
+            std::shared_lock lock(m_);
+
+            auto r = std::views::keys(books_id_);
+            return {r.begin(), r.end()};
+        }
+
         auto AddBook(BookPtr book_ptr) -> BookId
         {
             std::unique_lock lock(m_);
@@ -73,7 +81,6 @@ namespace book_holder
             if (books_id_.contains(book_id))
             {
                 auto book_ptr = books_id_[book_id];
-
                 auto instr = book_ptr->GetInstrument();
 
                 books_by_instr_[instr].erase(book_id);

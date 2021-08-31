@@ -13,15 +13,15 @@
 
 #include "Order.hpp"
 
-using Action = std::tuple<std::string, std::unique_ptr<OrderAction>>;
+using Action = std::tuple<std::string, std::shared_ptr<OrderAction>>;
 
 class OrdersGenerator
 {
     struct OrdersIdCounters
     {
         int current_create_id{0};
-        int current_remove_id{0};
-        int current_modify_id{0};
+        int current_remove_id{20}; // for manual tests
+        int current_modify_id{30};
     };
 
     std::map<std::string_view, OrdersIdCounters> counters_;
@@ -99,10 +99,11 @@ public:
     {
         auto cr_id = getCreateId(instr);
 
-        return std::make_unique<OrderCreate>(
-            Order{.id = cr_id,
-                  .price{rand() % 99 + 1},
-                  .quantity{rand() % 99 + 1}});
+        auto order_ptr = std::make_shared<Order>(cr_id,
+                                                 Price{rand() % 99 + 1},
+                                                 Quantity{rand() % 99 + 1});
+
+        return std::make_unique<OrderCreate>(order_ptr);
     }
 
     auto GenerateModify(std::string_view instr) -> std::unique_ptr<OrderModify>
