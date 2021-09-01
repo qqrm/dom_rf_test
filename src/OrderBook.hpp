@@ -73,6 +73,13 @@ public:
             auto order_ptr{orders_[id]};
             auto price{order_ptr->price};
             quantitys_[price].value -= order_ptr->quantity.value;
+
+            // for buy/sell books should be changed, but now it's ok
+            if (0 == quantitys_[price].value)
+            {
+                quantitys_.erase(price);
+            }
+
             orders_.erase(id);
         }
     };

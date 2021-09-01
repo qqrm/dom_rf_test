@@ -113,7 +113,7 @@ namespace book_holder
             }
         }
 
-        auto ModifyOrder(std::string &instrument, OrderModify order) -> void
+        auto ModifyOrder(std::string &instrument, OrderModify order_modify) -> void
         {
             std::scoped_lock lock(mtx_books_id_, mtx_books_instr_);
 
@@ -121,7 +121,20 @@ namespace book_holder
             {
                 for (auto book_id : books_by_instr_[instrument])
                 {
-                    books_id_[book_id]->Modify(order);
+                    books_id_[book_id]->Modify(order_modify);
+                }
+            }
+        }
+
+        auto RmoveOrder(std::string &instrument, OrderRemove order_remove) -> void
+        {
+            std::scoped_lock lock(mtx_books_id_, mtx_books_instr_);
+
+            if (books_by_instr_.contains(instrument))
+            {
+                for (auto book_id : books_by_instr_[instrument])
+                {
+                    books_id_[book_id]->Remove(order_remove.id);
                 }
             }
         }

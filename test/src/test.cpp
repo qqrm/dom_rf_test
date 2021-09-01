@@ -187,6 +187,21 @@ void modify_order_test()
 
 void remove_order_test()
 {
+    std::string instr = "bbb";
+    BookHolder bh;
+
+    BookPtr book_ptr = std::make_shared<OrderBook>(instr);
+
+    bh.AddBook(book_ptr);
+
+    auto order_ptr{std::make_shared<Order>(111,
+                                           Price{222},
+                                           Quantity{333})};
+
+    bh.AddOrder(instr, order_ptr);
+    bh.RmoveOrder(instr, OrderRemove(111));
+
+    assert(bh.GetQuantity(0, Price{222}).has_value() == false);
 }
 
 void order_gen_tests()
