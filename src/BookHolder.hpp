@@ -7,6 +7,9 @@
 #include <initializer_list>
 #include <iostream>
 #include <set>
+#include <mutex>
+#include <atomic>
+
 
 namespace book_holder
 {
@@ -18,19 +21,19 @@ namespace book_holder
 
     class BookHolder
     {
-        BookSet books_;
+        // BookSet books_;
         BookMapById books_id_;
         BookIdByInstr books_by_instr_;
-        int id{0};
-        mutable std::shared_mutex m_;
+        std::atomic<int> id{0};
+        mutable std::shared_mutex books_id_m_;
+        mutable std::shared_mutex books_instr_m_;
 
     public:
         BookHolder() = default;
 
-        BookHolder(BookSet books)
-            : books_(books)
+        BookHolder(BookSet const &books)
         {
-            for (auto book : books_)
+            for (auto book : books)
             {
                 auto cur_id{id++};
                 books_id_.insert({cur_id, book});
@@ -40,32 +43,29 @@ namespace book_holder
 
         auto GetInstruments() const -> std::set<std::string>
         {
-            std::shared_lock lock(m_);
+            std::shared_lock lock(books_instr_m_);
             auto r{std::views::keys(books_by_instr_)};
             return {r.begin(), r.end()};
         }
 
         auto GetCount() const -> size_t
         {
-            std::shared_lock lock(m_);
+            std::shared_lock lock(books_id_m_);
             return books_id_.size();
         }
 
         auto GetIds() const -> std::set<BookId>
         {
-            std::shared_lock lock(m_);
-
+            std::shared_lock lock(books_id_m_);
             auto r{std::views::keys(books_id_)};
             return {r.begin(), r.end()};
         }
 
         auto AddBook(BookPtr book_ptr) -> BookId
         {
-            std::unique_lock lock(m_);
+            std::scoped_lock lock(books_id_m_, books_instr_m_);
 
             std::string const instr{book_ptr->GetInstrument()};
-
-            books_.insert(book_ptr);
 
             auto cur_id{id++};
             books_id_.insert({cur_id, book_ptr});
@@ -76,7 +76,7 @@ namespace book_holder
 
         auto RemoveBook(int book_id) -> void
         {
-            std::unique_lock lock(m_);
+            std::scoped_lock lock(books_id_m_, books_instr_m_);
             if (books_id_.contains(book_id))
             {
                 auto book_ptr{books_id_[book_id]};
@@ -89,13 +89,13 @@ namespace book_holder
                 }
 
                 books_id_.erase(book_id);
-                books_.erase(book_ptr);
             }
         }
 
         auto AddOrder(std::string instrument, Order order) -> void
         {
-            std::unique_lock lock(m_); // not so good
+            std::scoped_lock lock(books_id_m_, books_instr_m_); 
+            // TODO: add logic
         }
     };
 
