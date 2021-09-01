@@ -26,14 +26,13 @@ namespace book_holder
 
     public:
         BookHolder() = default;
-        // BookHolder(const BookHolder &) = default;
 
         BookHolder(BookSet books)
             : books_(books)
         {
             for (auto book : books_)
             {
-                auto cur_id = id++;
+                auto cur_id{id++};
                 books_id_.insert({cur_id, book});
                 books_by_instr_[book->GetInstrument()].insert(cur_id);
             }
@@ -42,7 +41,7 @@ namespace book_holder
         auto GetInstruments() const -> std::set<std::string>
         {
             std::shared_lock lock(m_);
-            auto r = std::views::keys(books_by_instr_);
+            auto r{std::views::keys(books_by_instr_)};
             return {r.begin(), r.end()};
         }
 
@@ -56,7 +55,7 @@ namespace book_holder
         {
             std::shared_lock lock(m_);
 
-            auto r = std::views::keys(books_id_);
+            auto r{std::views::keys(books_id_)};
             return {r.begin(), r.end()};
         }
 
@@ -64,11 +63,11 @@ namespace book_holder
         {
             std::unique_lock lock(m_);
 
-            std::string const instr = book_ptr->GetInstrument();
+            std::string const instr{book_ptr->GetInstrument()};
 
             books_.insert(book_ptr);
 
-            auto cur_id = id++;
+            auto cur_id{id++};
             books_id_.insert({cur_id, book_ptr});
             books_by_instr_[book_ptr->GetInstrument()].insert(cur_id);
 
@@ -80,8 +79,8 @@ namespace book_holder
             std::unique_lock lock(m_);
             if (books_id_.contains(book_id))
             {
-                auto book_ptr = books_id_[book_id];
-                auto instr = book_ptr->GetInstrument();
+                auto book_ptr{books_id_[book_id]};
+                auto instr{book_ptr->GetInstrument()};
 
                 books_by_instr_[instr].erase(book_id);
                 if (books_by_instr_[instr].empty())

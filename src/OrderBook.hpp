@@ -19,14 +19,13 @@ class OrderBook
 private:
     const std::string instrument_;
     std::unordered_map<UniqId, OrderPtr> orders_;
-
     std::unordered_map<Price, std::set<OrderPtr>, decltype(price_hash)> orders_by_prices_;
 
     auto calcQuantity(const Price price) const -> Quantity
     {
         if (orders_by_prices_.contains(price))
         {
-            auto const orders = (orders_by_prices_.find(price))->second;
+            auto const orders{orders_by_prices_.find(price)->second};
             return {std::accumulate(orders.begin(),
                                     orders.end(),
                                     0, [](int acc, OrderPtr const &order)
@@ -55,10 +54,10 @@ public:
     {
         if (orders_.contains(id))
         {
-            auto order_ptr = orders_[id];
+            auto order_ptr{orders_[id]};
             orders_.erase(id);
 
-            auto price = order_ptr->price;
+            auto price{order_ptr->price};
 
             if (orders_by_prices_[price].size() == 1)
             {

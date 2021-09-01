@@ -2,67 +2,71 @@
 
 #include <variant>
 
-using UniqId = int;
-
-// strong types for variant
-struct Quantity
+namespace order
 {
-    int value{0};
+    using UniqId = int;
 
-    auto operator<=>(auto const &rhs) const { return value <=> rhs.value; }
-    auto operator==(auto const &rhs) const { return value == rhs.value; }
-};
+    // strong types for variant
+    struct Quantity
+    {
+        int value{0};
 
-struct Price
-{
-    int value{0};
+        auto operator<=>(auto const &rhs) const { return value <=> rhs.value; }
+        auto operator==(auto const &rhs) const { return value == rhs.value; }
+    };
 
-    auto operator<=>(auto const &rhs) const { return value <=> rhs.value; }
-    auto operator==(auto const &rhs) const { return value == rhs.value; }
-};
+    struct Price
+    {
+        int value{0};
 
-auto price_hash = [](Price const &p)
-{
-    return std::hash<int>()(p.value);
-};
+        auto operator<=>(auto const &rhs) const { return value <=> rhs.value; }
+        auto operator==(auto const &rhs) const { return value == rhs.value; }
+    };
 
-struct Order
-{
-    UniqId id;
-    Price price;
-    Quantity quantity;
-    Order(UniqId i, Price p, Quantity q)
-        : id(i), price(p), quantity(q){};
-};
+    auto price_hash = [](Price const &p)
+    {
+        return std::hash<int>()(p.value);
+    };
 
-using OrderPtr = std::shared_ptr<Order>;
+    struct Order
+    {
+        UniqId id;
+        Price price;
+        Quantity quantity;
+        Order(UniqId i, Price p, Quantity q)
+            : id(i), price(p), quantity(q){};
+    };
 
-struct OrderAction
-{
-};
+    using OrderPtr = std::shared_ptr<Order>;
 
-struct OrderCreate : OrderAction
-{
-    OrderPtr order;
-    OrderCreate() = delete;
-    explicit OrderCreate(OrderPtr o)
-        : order(o){};
-};
+    struct OrderAction
+    {
+    };
 
-struct OrderModify : OrderAction
-{
-    UniqId id;
-    std::variant<Price, Quantity> change;
+    struct OrderCreate : OrderAction
+    {
+        OrderPtr order;
+        OrderCreate() = delete;
+        explicit OrderCreate(OrderPtr o)
+            : order(o){};
+    };
 
-    OrderModify() = delete;
-    explicit OrderModify(UniqId i, std::variant<Price, Quantity> c)
-        : id(i), change(c){};
-};
+    struct OrderModify : OrderAction
+    {
+        UniqId id;
+        std::variant<Price, Quantity> change;
 
-struct OrderRemove : OrderAction
-{
-    UniqId id;
+        OrderModify() = delete;
+        explicit OrderModify(UniqId i, std::variant<Price, Quantity> c)
+            : id(i), change(c){};
+    };
 
-    OrderRemove() = delete;
-    explicit OrderRemove(UniqId i) : id(i) {}
-};
+    struct OrderRemove : OrderAction
+    {
+        UniqId id;
+
+        OrderRemove() = delete;
+        explicit OrderRemove(UniqId i) : id(i) {}
+    };
+
+} // order
