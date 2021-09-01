@@ -10,23 +10,26 @@
 #include <mutex>
 #include <atomic>
 
-
 namespace book_holder
 {
-    using BookId = int;
     using BookPtr = std::shared_ptr<OrderBook>;
+    using BookId = int;
+
     using BookSet = std::set<std::shared_ptr<OrderBook>>;
-    using BookMapById = std::unordered_map<BookId, std::shared_ptr<OrderBook>>;
+    using BookMapById = std::vector<std::shared_ptr<OrderBook>>;
     using BookIdByInstr = std::unordered_map<std::string, std::set<BookId>>;
 
     class BookHolder
     {
         // BookSet books_;
-        BookMapById books_id_;
+        std::set<int> ids_;
+        BookMapById books_id_{30}; // resize checks needs
         BookIdByInstr books_by_instr_;
         std::atomic<int> id{0};
-        mutable std::shared_mutex books_id_m_;
-        mutable std::shared_mutex books_instr_m_;
+        std::atomic<int> count{0};
+
+        mutable std::shared_mutex mtx_books_id_;
+        mutable std::shared_mutex mtx_books_instr_;
 
     public:
         BookHolder() = default;
@@ -36,48 +39,51 @@ namespace book_holder
             for (auto book : books)
             {
                 auto cur_id{id++};
-                books_id_.insert({cur_id, book});
+                books_id_[id] = book;
                 books_by_instr_[book->GetInstrument()].insert(cur_id);
+                ids_.insert(cur_id);
             }
+            count = books.size();
         };
 
         auto GetInstruments() const -> std::set<std::string>
         {
-            std::shared_lock lock(books_instr_m_);
+            std::shared_lock lock(mtx_books_instr_);
             auto r{std::views::keys(books_by_instr_)};
             return {r.begin(), r.end()};
         }
 
         auto GetCount() const -> size_t
         {
-            std::shared_lock lock(books_id_m_);
-            return books_id_.size();
+            return count;
         }
 
-        auto GetIds() const -> std::set<BookId>
+        auto GetIdsByInst() const -> BookIdByInstr
         {
-            std::shared_lock lock(books_id_m_);
-            auto r{std::views::keys(books_id_)};
-            return {r.begin(), r.end()};
+            std::shared_lock lock(mtx_books_instr_);
+            return books_by_instr_;
         }
 
         auto AddBook(BookPtr book_ptr) -> BookId
         {
-            std::scoped_lock lock(books_id_m_, books_instr_m_);
+            std::scoped_lock lock(mtx_books_id_, mtx_books_instr_);
 
             std::string const instr{book_ptr->GetInstrument()};
 
             auto cur_id{id++};
-            books_id_.insert({cur_id, book_ptr});
+            ids_.insert(cur_id);
+            books_id_[cur_id] = book_ptr;
             books_by_instr_[book_ptr->GetInstrument()].insert(cur_id);
+
+            count++;
 
             return cur_id;
         }
 
         auto RemoveBook(int book_id) -> void
         {
-            std::scoped_lock lock(books_id_m_, books_instr_m_);
-            if (books_id_.contains(book_id))
+            std::scoped_lock lock(mtx_books_id_, mtx_books_instr_);
+            if (books_id_[book_id])
             {
                 auto book_ptr{books_id_[book_id]};
                 auto instr{book_ptr->GetInstrument()};
@@ -88,14 +94,33 @@ namespace book_holder
                     books_by_instr_.erase(instr);
                 }
 
-                books_id_.erase(book_id);
+                books_id_[book_id] = nullptr;
+                ids_.erase(book_id);
+                count--;
             }
         }
 
-        auto AddOrder(std::string instrument, Order order) -> void
+        auto AddOrder(std::string &instrument, OrderPtr order) -> void
         {
-            std::scoped_lock lock(books_id_m_, books_instr_m_); 
-            // TODO: add logic
+            std::scoped_lock lock(mtx_books_id_, mtx_books_instr_);
+
+            if (books_by_instr_.contains(instrument))
+            {
+                for (auto book_id : books_by_instr_[instrument])
+                {
+                    books_id_[book_id]->Add(order);
+                }
+            }
+        }
+
+        auto GetQuantity(BookId id, const Price price) const -> std::optional<Quantity>
+        {
+            if (books_id_[id])
+            {
+                return {books_id_[id]->GetQuantity(price)};
+            }
+
+            return {};
         }
     };
 

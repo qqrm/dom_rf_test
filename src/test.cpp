@@ -26,12 +26,16 @@ void gen_orders(std::shared_ptr<BookHolder> book_holder)
     }
 }
 
-auto print_ids = [](auto ids)
+auto print_ids = [](auto books_by_instr)
 {
     std::cout << "\nid's: ";
-    for (auto id : ids)
+    for (auto const &[instument, ids] : books_by_instr)
     {
-        std::cout << id << " ";
+        std::cout << "instument: " << instument << " id's: ";
+        for (auto const id : ids)
+        {
+            std::cout << id << " ";
+        }
     }
     std::cout << "\n";
 };
@@ -48,7 +52,7 @@ int main(int argc, char const *argv[])
     for (int i{0}; i < 3; ++i)
     {
         std::cout << "Available books id's ";
-        print_ids(book_holder->GetIds());
+        print_ids(book_holder->GetIdsByInst());
     }
 
     return 0;

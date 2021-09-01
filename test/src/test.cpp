@@ -10,9 +10,22 @@
 
 using namespace book_holder;
 
+auto print_ids = [](auto books_by_instr)
+{
+    std::cout << "\n";
+    for (auto const &[instument, ids] : books_by_instr)
+    {
+        std::cout << "instument: " << instument << " id's: ";
+        for (auto const id : ids)
+        {
+            std::cout << id << " ";
+        }
+    }
+    std::cout << "\n";
+};
+
 void book_holder_init_tests()
 {
-
     {
         BookHolder bh(BookSetFactory({"aaa", "bbb", "ccc"}));
 
@@ -89,6 +102,61 @@ void order_book_tests()
     assert(Quantity{222} == book.GetQuantity(Price{444}));
 }
 
+void book_holder_add_order_tests()
+{
+    std::string instr = "bbb";
+    BookHolder bh;
+
+    {
+        BookPtr book_ptr = std::make_shared<OrderBook>(instr);
+
+        bh.AddBook(book_ptr);
+
+        auto order_ptr{std::make_shared<Order>(111,
+                                               Price{222},
+                                               Quantity{333})};
+
+        bh.AddOrder(instr, order_ptr);
+
+        print_ids(bh.GetIdsByInst());
+
+        assert(book_ptr->GetQuantity(Price{222}) == bh.GetQuantity(0, Price{222}));
+
+        auto order_ptr1{std::make_shared<Order>(222,
+                                                Price{333},
+                                                Quantity{444})};
+
+        bh.AddOrder(instr, order_ptr1);
+
+        assert(book_ptr->GetQuantity(Price{222}) == bh.GetQuantity(0, Price{222}));
+        assert(book_ptr->GetQuantity(Price{333}) == bh.GetQuantity(0, Price{333}));
+
+        auto order_ptr2{std::make_shared<Order>(333,
+                                                Price{333},
+                                                Quantity{444})};
+
+        bh.AddOrder(instr, order_ptr2);
+        assert(book_ptr->GetQuantity(Price{333}) == bh.GetQuantity(0, Price{333}));
+        assert(Quantity{888} == bh.GetQuantity(0, Price{333}));
+    }
+
+    {
+        std::string instr1 = "zzz";
+        BookPtr book_ptr = std::make_shared<OrderBook>(instr);
+
+        bh.AddBook(book_ptr);
+
+        auto order_ptr{std::make_shared<Order>(111,
+                                               Price{222},
+                                               Quantity{333})};
+
+        bh.AddOrder(instr1, order_ptr);
+        assert(book_ptr->GetQuantity(Price{222}) == bh.GetQuantity(1, Price{222}));
+    }
+
+    assert(2 == bh.GetCount());
+}
+
 void order_gen_tests()
 {
     BookHolder bh(BookSetFactory({"aaa", "bbb", "ccc"}));
@@ -100,6 +168,7 @@ TEST_LIST = {
 
     {"BookHolder int tests", book_holder_init_tests},
     {"OrderBook tests", order_book_tests},
+    {"BookHolder add tests", book_holder_add_order_tests},
 
     // {"OrderGen tests", order_gen_tests},
 

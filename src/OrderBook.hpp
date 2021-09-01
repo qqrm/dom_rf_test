@@ -14,6 +14,8 @@
 
 #include "Order.hpp"
 
+using namespace order;
+
 class OrderBook
 {
 private:
