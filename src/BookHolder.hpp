@@ -113,6 +113,19 @@ namespace book_holder
             }
         }
 
+        auto ModifyOrder(std::string &instrument, OrderModify order) -> void
+        {
+            std::scoped_lock lock(mtx_books_id_, mtx_books_instr_);
+
+            if (books_by_instr_.contains(instrument))
+            {
+                for (auto book_id : books_by_instr_[instrument])
+                {
+                    books_id_[book_id]->Modify(order);
+                }
+            }
+        }
+
         auto GetQuantity(BookId id, const Price price) const -> std::optional<Quantity>
         {
             if (books_id_[id])
